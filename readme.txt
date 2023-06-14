@@ -13,7 +13,7 @@ Create a prototype that handles the problem for small batches of text, test it
   Read, count words, calculate frequencies, sort
 Scale up to the size of the training data
   If one file can be processed at a time, create a driver that sequentially processes data, then writes the results to a collective between switching data files.
-  This is several separate jobs, the driver, and the handling of the total data, neither of which relies on the initial file processor
+  This is several separate jobs, the driver, and the handling of the total data, and a different reader (getting frequencies and sorting before the end is a waste)
 Once I have the training data, I should be able to use the same initial processor on new test data
   There may be complications here- my training data arrived in JSON form. I can either convert test data to JSON or make a new processor
 Then I need to handle the comparison of the training and the test data

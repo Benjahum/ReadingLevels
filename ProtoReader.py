@@ -6,6 +6,8 @@ Created on Tue Jun 20 13:58:34 2023
 """
 import json
 import re
+import pyodbc
+
 
 
 f = open(r"RawData\articles_001.json","r",encoding='utf-8')
@@ -45,5 +47,7 @@ for word in remove_these:
 f = open(r"Data\ProtoOut.json","w")
 json.dump(word_counts,f,indent=0)
 #indent key is required for the text to not be written all on one line.
+
+
 
 

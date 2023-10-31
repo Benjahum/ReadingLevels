@@ -49,7 +49,7 @@ for word in remove_these:
 with cnxn:
     crs = cnxn.cursor()
     #instantiate add string
-    tsql = 'INSERT INTO RL..Words(Word, Used) VALUES '
+    tsql = 'INSERT INTO RL..Wordstemp(Word, Used) VALUES '
     #instantiate counter
     count = 0
     #loop over word counts, probably items because i need word and used
@@ -69,7 +69,7 @@ with cnxn:
             #print(tsql)
             crs.execute(tsql)
             #reset the add string
-            tsql = 'INSERT INTO RL..Words(Word, Used) VALUES '
+            tsql = 'INSERT INTO RL..Wordstemp(Word, Used) VALUES '
             #reset the counter
             count = 0
             
@@ -78,6 +78,22 @@ with cnxn:
     if len(tsql) > 41:
         crs.execute(tsql[0:-2]+';')
         #add it to the database
+        
+    #From here, run the tsql command that merges the elements in wordstemp with words
+    tsql = """UPDATE RL..Words
+            SET Words.Used = Words.Used + Wordstemp.Used
+            FROM RL..Wordstemp 
+            WHERE Words.Word = Wordstemp.Word;"""
+    crs.execute(tsql)
+    #Then add in the uniquely appearing words
+    tsql ="""INSERT INTO RL..Words (Word, Used)
+            SELECT * FROM RL..Wordstemp AS Wt
+            WHERE NOT EXISTS (
+            SELECT Word FROM RL..Words AS W 
+            WHERE W.Word = Wt.Word); """
+    crs.execute(tsql)
+    crs.execute('TRUNCATE TABLE RL..WORDSTEMP;')
+    
         
 #Exiting scope of connection closes it and commits changes
     

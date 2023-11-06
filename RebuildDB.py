@@ -9,10 +9,6 @@ import re
 import pyodbc
 #from timeit import default_timer as timer
 
-#Establish connection to local MS SQL Server with generic credentials
-
-
-
 def Filter_Eng(crs):
     # The English Dict is a pre-existing table
     # Created with RebuildEngDict.py
@@ -141,6 +137,15 @@ def Add_To_Words(conn_str, filepath):
     
     #Exiting scope of connection closes it and commits changes
     
+def Calculate_Rate(conn_str):
+    cnxn = pyodbc.connect(conn_str); 
+    with cnxn:
+        crs = cnxn.cursor()
+        crs.execute("""declare @total decimal
+set @total = (select SUM(Used) from RL..Words)
+update RL..Words
+set Rate = Used/@total;""")
+
     
 f=open(r'..\ConnCred.json',"r",encoding='utf-8')
 creds = json.load(f)
@@ -156,5 +161,6 @@ for i in range(1,606):
     filepath = r'..\archive\enwiki20201020\articles_'+str(i)+'.json'
     Add_To_Words(conn_str,filepath)
 
+Calculate_Rate(conn_str)
 
 

@@ -137,14 +137,14 @@ def Add_To_Words(conn_str, filepath):
     
     #Exiting scope of connection closes it and commits changes
     
-def Calculate_Rate(conn_str):
+def Calculate_Rate(conn_str, DBname):
     cnxn = pyodbc.connect(conn_str); 
     with cnxn:
         crs = cnxn.cursor()
         crs.execute("""declare @total decimal
-set @total = (select SUM(Used) from RL..Words)
+set @total = (select SUM(Used) from %s)
 update RL..Words
-set Rate = Used/@total;""")
+set Rate = Used/@total;""" % DBname)
 
     
 f=open(r'..\ConnCred.json',"r",encoding='utf-8')
@@ -161,6 +161,6 @@ for i in range(1,606):
     filepath = r'..\archive\enwiki20201020\articles_'+str(i)+'.json'
     Add_To_Words(conn_str,filepath)
 
-Calculate_Rate(conn_str)
+Calculate_Rate(conn_str, "RL..Words")
 
 

@@ -7,9 +7,20 @@ Created on Tue Jun 20 13:58:34 2023
 import json
 import re
 import pyodbc
+from RLFunctions.py import Calculate_Rate, Get_Connection
 #from timeit import default_timer as timer
 
 def Filter_Eng(crs):
+    """
+    Parameters
+    ----------
+    crs : Cursor Object
+        Allows this function to act on the database
+    Returns
+    -------
+    None.
+
+    """
     # The English Dict is a pre-existing table
     # Created with RebuildEngDict.py
     tsql ="""DELETE FROM #Wordstemp
@@ -21,14 +32,12 @@ def Filter_Eng(crs):
 
 def Add_To_Words(conn_str, filepath):
     '''
-
     Parameters
     ----------
     conn_str : String
         Contains the string required to log in to the database
     filepath : String
         The path to a json file containing the text from multiple wikipedia articles
-
     Returns
     -------
     None.
@@ -137,30 +146,10 @@ def Add_To_Words(conn_str, filepath):
     
     #Exiting scope of connection closes it and commits changes
     
-def Calculate_Rate(conn_str, DBname):
-    cnxn = pyodbc.connect(conn_str); 
-    with cnxn:
-        crs = cnxn.cursor()
-        crs.execute("""declare @total decimal
-set @total = (select SUM(Used) from %s)
-update RL..Words
-set Rate = Used/@total;""" % DBname)
-
-    
-f=open(r'..\ConnCred.json',"r",encoding='utf-8')
-creds = json.load(f)
-f.close()
-
-SERVER = creds["SERVER"]
-DATABASE = creds["DATABASE"]
-USERNAME = creds["USERNAME"]
-PASSWORD = creds["PASSWORD"]
-conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD}'
-
+conn_str = Get_Connection()
 for i in range(1,606):
     filepath = r'..\archive\enwiki20201020\articles_'+str(i)+'.json'
     Add_To_Words(conn_str,filepath)
-
 Calculate_Rate(conn_str, "RL..Words")
 
 

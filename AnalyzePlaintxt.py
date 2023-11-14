@@ -8,38 +8,10 @@ import json
 import re
 import pyodbc
 from timeit import default_timer as timer
-#from RebuildDB.py import Calculate_Rate
-
-def Calculate_Rate(conn_str, DBname): 
-#I'm still not sure why importing this broke everything,
-#but I needed to change the execute string to reflect that this targets the temp table
-#I think importing the file actually ran some of it, which then updated words
-# I think i can test that though
-    cnxn = pyodbc.connect(conn_str); 
-    with cnxn:
-        crs = cnxn.cursor()
-        crs.execute("""declare @total decimal
-set @total = (select SUM(Used) from %s)
-update %s
-set Rate = Used/@total;""" % (DBname, DBname))
-
-
-print("Print statements work")
-
-f=open(r'..\ConnCred.json',"r",encoding='utf-8')
-creds = json.load(f)
-f.close()
-
-SERVER = creds["SERVER"]
-DATABASE = creds["DATABASE"]
-USERNAME = creds["USERNAME"]
-PASSWORD = creds["PASSWORD"]
-conn_str = f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={SERVER};DATABASE={DATABASE};UID={USERNAME};PWD={PASSWORD}'
+from RLFunctions.py import Calculate_Rate, Get_Connection
 
 
 
-
-#consider doing this in parallel, actually. If I can be reading and processing at the same time, that would probably roughly half the time this takes.
 start = timer()
 print("start timer works")
 f= open(r'..\archive\babbitt.txt',"r",encoding='utf-8')
@@ -79,6 +51,7 @@ for word in remove_these:
 end = timer()
 print("time to populate dictionary: %f" % (end-start))
 
+conn_str = Get_Connection()
 cnxn = pyodbc.connect(conn_str);
 with cnxn:
     crs = cnxn.cursor()

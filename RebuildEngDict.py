@@ -19,7 +19,9 @@ conn_str = Get_Connection()
 cnxn = pyodbc.connect(conn_str);
 with cnxn:
     crs = cnxn.cursor()
-    crs.execute('DROP TABLE RL..Eng_Dict;')
+    crs.execute("""IF EXISTS (Select * from INFORMATION_SCHEMA.TABLES
+			    WHERE Table_Name = 'Eng_Dict')
+                DROP TABLE RL..Eng_Dict;""")
     crs.execute('CREATE TABLE RL..Eng_Dict(Word VARCHAR(100));')
     tsql = 'INSERT INTO RL..Eng_Dict(Word) VALUES '
     count = 0

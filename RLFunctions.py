@@ -7,7 +7,7 @@ Created on Tue Nov 14 15:37:37 2023
 import pyodbc
 import json
 
-def Calculate_Rate(conn_str, TBname): 
+def Derive_Columns(conn_str, TBname): 
     """
     Parameters
     ----------
@@ -22,10 +22,21 @@ def Calculate_Rate(conn_str, TBname):
     cnxn = pyodbc.connect(conn_str); 
     with cnxn:
         crs = cnxn.cursor()
+        #populating the rate column
         crs.execute("""declare @total decimal
                     set @total = (select SUM(Used) from %s)
                     update %s
                     set Rate = Used/@total;""" % (TBname, TBname))
+        #populating the UsedOrder column
+        crs.execute("""WITH wordCTE as
+                    (SELECT Word, ROW_NUMBER() OVER(order by Used desc) as rownum
+                     FROM %s
+                     ORDER BY Used desc offset 0 rows)
+                    UPDATE %s
+                    SET %s = wordCTE.rownum
+                    FROM wordCTE
+                    where %s = wordCTE.Word;
+                    """%(TBname, TBname, TBname[4:] + '.UsedOrder', TBname[4:] + '.Word'))
                     
 def Get_Connection():
     """

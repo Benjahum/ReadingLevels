@@ -7,7 +7,7 @@ Created on Tue Jun 20 13:58:34 2023
 import json
 import re
 import pyodbc
-from RLFunctions.py import Calculate_Rate, Get_Connection
+from RLFunctions import Derive_Columns, Get_Connection
 #from timeit import default_timer as timer
 
 def Filter_Eng(crs):
@@ -67,7 +67,7 @@ def Add_To_Words(conn_str, filepath):
                 
     words = word_counts.keys()
     remove_these = set() #Convert all to lowercase, consolidate duplicates, remove junk
-    for word in word_counts.keys():
+    for word in words:
         if len(word) > 35: #The longest word in the current filter dictionary is 31 letters
             remove_these.add(word)
             continue
@@ -80,14 +80,17 @@ def Add_To_Words(conn_str, filepath):
     
     #end = timer()
     #print("PythonTotal")
-    #print(end - start) # as of 11/2, the python section takes 3.5~4 seconds
+    #print(end - start) 
     #start = timer()
     with cnxn:
         crs = cnxn.cursor()
-        crs.execute("create table #Wordstemp (Word VARCHAR(100), Used BIGINT)")
+        crs.execute("""IF EXISTS (Select * from INFORMATION_SCHEMA.TABLES
+    			    WHERE Table_Name = 'Words')
+                    DROP TABLE RL..Eng_Dict;""")
+        crs.execute("create table RL..Words (Word varchar(100), Used bigint, Rate decimal(15,14), UsedOrder int);")
+        crs.execute("create table #Wordstemp (Word VARCHAR(100), Used BIGINT);")
         tsql = 'INSERT INTO #Wordstemp(Word, Used) VALUES '      
         count = 0 # counter for sql server insert token limit (1000)
-        #print('We made it into the insert loop without an error')
         #popstart = timer()
         for word, used in word_counts.items():
             if count < 998:
@@ -101,7 +104,6 @@ def Add_To_Words(conn_str, filepath):
                 count = 0
                 
         #check if there are leftover entries (almost always)
-        #print('we made it out of the insert loop without an error')
         if len(tsql) > 41:
             crs.execute(tsql[0:-2]+';')
         #popend= timer()
@@ -113,13 +115,14 @@ def Add_To_Words(conn_str, filepath):
         #print("English filter")
         #print(filtend - filtstart) # Filter is fast 
             
-        #From here, run the tsql command that merges the elements in wordstemp with words
+        # merges the elements in wordstemp with words
         #mergestart = timer()
         tsql = """UPDATE RL..Words
                 SET Words.Used = Words.Used + #Wordstemp.Used
                 FROM #Wordstemp 
                 WHERE Words.Word = #Wordstemp.Word;"""
         crs.execute(tsql) # Updates values for known words
+        
         #mergeend = timer()
         #print("Merging contained words")
         #print(mergeend-mergestart)
@@ -130,6 +133,7 @@ def Add_To_Words(conn_str, filepath):
                 SELECT Word FROM RL..Words AS W 
                 WHERE W.Word = Wt.Word); """ 
         crs.execute(tsql) #Adds new words
+        
         #missend = timer()
         #print("insert missing")
         #print(missend-missstart)
@@ -142,7 +146,7 @@ def Add_To_Words(conn_str, filepath):
         
         
     #end = timer()
-    #print(end-start) # As of 11/1, the sql section takes ~8s on large files
+    #print(end-start)
     
     #Exiting scope of connection closes it and commits changes
     
@@ -150,6 +154,6 @@ conn_str = Get_Connection()
 for i in range(1,606):
     filepath = r'..\archive\enwiki20201020\articles_'+str(i)+'.json'
     Add_To_Words(conn_str,filepath)
-Calculate_Rate(conn_str, "RL..Words")
+Derive_Columns(conn_str, "RL..Words")
 
 

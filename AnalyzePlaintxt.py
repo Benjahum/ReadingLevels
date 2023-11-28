@@ -6,19 +6,14 @@ Created on Tue Nov  7 15:28:28 2023
 """
 import re
 import pyodbc
-#from timeit import default_timer as timer
 from RLFunctions import Derive_Columns, Get_Connection
 
 
 filename = input("File name of target in archive: ")
-#start = timer()
 f= open(r'..\archive\%s.txt'%(filename),"r",encoding='utf-8')
 lines = f.readlines()
 f.close()
-#end = timer()
-#print("time to read %s : %f" % (filename,end-start))
 
-#start = timer()
 word_counts = {}
 # Filters out non-word objects like numbers, dates, URL's, section tags
 wordreg = re.compile("(?<=[ \[('{-])[a-zA-Z]+(?=[.!?',_\])} -])")
@@ -43,9 +38,6 @@ for word in words:
         remove_these.add(word)
 for word in remove_these:
     del word_counts[word]
-#end = timer()
-#print("time to populate dictionary: %f" % (end-start))
-
 
 conn_str = Get_Connection()
 cnxn = pyodbc.connect(conn_str);
@@ -55,14 +47,12 @@ with cnxn:
     crs.execute("create table RL..Wordstemp (Word VARCHAR(100), Used BIGINT, Rate decimal(15,14),UsedOrder int);")
     tsql = 'INSERT INTO RL..Wordstemp(Word, Used) VALUES '      
     count = 0 # counter for sql server insert token limit (1000)
-    #popstart = timer()
     for word, used in word_counts.items():
         if count < 998:
             tsql += '(\'' + word + '\',' + str(used) + '), '
             count += 1
         else:
             tsql += "(\'"+word+'\','+ str(used) + ");"
-            #print(tsql)
             crs.execute(tsql)
             tsql = 'INSERT INTO RL..Wordstemp(Word, Used) VALUES '
             count = 0            
@@ -70,11 +60,10 @@ with cnxn:
     #check if there are leftover entries (almost always)    
     if len(tsql) > 42:
         tsql = tsql[0:-2]+';'
-        #print(tsql)
         crs.execute(tsql) 
+        
 Derive_Columns(conn_str,"RL..Wordstemp")
-#popend = timer()
-#print("time to populate temp DB: %f" % (popend-popstart))
+
 with cnxn:
     crs = cnxn.cursor()
     crs.execute("""declare @Wordstot decimal

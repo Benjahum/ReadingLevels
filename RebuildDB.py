@@ -8,7 +8,6 @@ import json
 import re
 import pyodbc
 from RLFunctions import Derive_Columns, Get_Connection
-#from timeit import default_timer as timer
 
 def Filter_Eng(crs):
     """
@@ -44,8 +43,7 @@ def Add_To_Words(conn_str, filepath):
 
     '''
     
-    
-    #start = timer()     
+       
     cnxn = pyodbc.connect(conn_str); 
     
     f = open(filepath,"r",encoding='utf-8')
@@ -78,10 +76,6 @@ def Add_To_Words(conn_str, filepath):
     for word in remove_these:
         del word_counts[word]
     
-    #end = timer()
-    #print("PythonTotal")
-    #print(end - start) 
-    #start = timer()
     with cnxn:
         crs = cnxn.cursor()
         crs.execute("""IF EXISTS (Select * from INFORMATION_SCHEMA.TABLES
@@ -91,14 +85,12 @@ def Add_To_Words(conn_str, filepath):
         crs.execute("create table #Wordstemp (Word VARCHAR(100), Used BIGINT);")
         tsql = 'INSERT INTO #Wordstemp(Word, Used) VALUES '      
         count = 0 # counter for sql server insert token limit (1000)
-        #popstart = timer()
         for word, used in word_counts.items():
             if count < 998:
                 tsql += '(\'' + word + '\',' + str(used) + '), '
                 count += 1
             else:
                 tsql += "(\'"+word+'\','+ str(used) + ");"
-                #print(tsql)
                 crs.execute(tsql)
                 tsql = 'INSERT INTO #Wordstemp(Word, Used) VALUES '
                 count = 0
@@ -106,27 +98,15 @@ def Add_To_Words(conn_str, filepath):
         #check if there are leftover entries (almost always)
         if len(tsql) > 41:
             crs.execute(tsql[0:-2]+';')
-        #popend= timer()
-        #print("The add loop")
-        #print(popend-popstart) # The loop burns something like 7-8s on the larger files
-        #filtstart = timer()
         Filter_Eng(crs)
-        #filtend = timer()
-        #print("English filter")
-        #print(filtend - filtstart) # Filter is fast 
             
         # merges the elements in wordstemp with words
-        #mergestart = timer()
         tsql = """UPDATE RL..Words
                 SET Words.Used = Words.Used + #Wordstemp.Used
                 FROM #Wordstemp 
                 WHERE Words.Word = #Wordstemp.Word;"""
         crs.execute(tsql) # Updates values for known words
         
-        #mergeend = timer()
-        #print("Merging contained words")
-        #print(mergeend-mergestart)
-        #missstart= timer()
         tsql ="""INSERT INTO RL..Words (Word, Used)
                 SELECT * FROM #Wordstemp AS Wt
                 WHERE NOT EXISTS (
@@ -134,19 +114,8 @@ def Add_To_Words(conn_str, filepath):
                 WHERE W.Word = Wt.Word); """ 
         crs.execute(tsql) #Adds new words
         
-        #missend = timer()
-        #print("insert missing")
-        #print(missend-missstart)
-        
-        #trunstart = timer()
         crs.execute('DROP TABLE #WORDSTEMP;')
-        #trunend = timer()
-        #print("truncate")
-        #print(trunend-trunstart)
-        
-        
-    #end = timer()
-    #print(end-start)
+
     
     #Exiting scope of connection closes it and commits changes
     
